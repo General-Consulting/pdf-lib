@@ -513,6 +513,35 @@ export default class PDFForm {
     return PDFTextField.of(text, text.ref, this.doc);
   }
 
+async renameField(existingFieldName: string, newName: string): Promise<void> {
+    // Split the new name into parts to identify the hierarchy and terminal field name
+    const newNameParts = newName.split('.');
+    const newNonTerminalNames = newNameParts.slice(0, -1);
+    const newTerminalName = newNameParts[newNameParts.length - 1];
+
+    // Find or create the new parent non-terminal field
+    let newParent = this.findOrCreateNonTerminals(newNonTerminalNames);
+
+    // Find the existing field to be renamed
+    const field = this.getField(existingFieldName);
+    if (!field) {
+      throw new Error(`Field with name ${existingFieldName} does not exist.`);
+    }
+
+    // Update the field's parent to the new parent node
+    addFieldToParent(newParent, [field.acroField, field.ref], newTerminalName);
+
+    // Update the terminal field's partial name
+    if (field instanceof PDFAcroField) {
+      field.setPartialName(newTerminalName);
+    } else {
+      throw new Error('Field is not an acroField and cannot be renamed.');
+    }
+
+    // Additional logic to update the fully qualified name of the field and its children, if necessary
+    // This might involve traversing the field's descendants and updating their names based on the new hierarchy
+  }
+
   /**
    * Flatten all fields in this [[PDFForm]].
    *
